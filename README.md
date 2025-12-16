@@ -40,20 +40,27 @@ Dataset Format:
     "control_file_path": [
         "instance_1.jpg",
         ...
+        "instance_N.jpg",
     ],
     "background_path": "background.jpg",
-    "text": "",
+    "text": "prompt...",
     "type": "video"
 }
 
-```bash
-    bash training/train_control_lora.sh
 ```
+launch training...
+
+```python
+bash training/train_control_lora.sh
+```
+
 
 # inference
 
-```bash
-    python  inference/predict_video_decouple.py
+Modify model_path and infer ...
+
+```python
+python  inference/predict_video_decouple.py
 ```
 
 

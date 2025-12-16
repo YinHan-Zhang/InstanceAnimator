@@ -9,11 +9,10 @@
 
 ## Overview
 
-<video width="640" height="360" controls autoplay muted loop>
-  <source src="./assets/video.mp4" type="video/mp4">
-  <source src="./assets/video.mp4" type="video/webm">
-  Demo video
-</video>
+<div align="center">
+  <video src="./assets/video.mp4" width="70%" poster=""> </video>
+</div>
+
 We propose InstanceAnimator, a novel Diffusion Transformer framework for multi-instance sketch video colorization.
 Existing animation colorization methods rely heavily on a single initial reference frame, resulting in fragmented workflows and limited customizability. To eliminate these constraints, we introduce a Canvas Guidance Condition that allows users to freely place reference elements on a blank canvas, enabling flexible user control. To address the misalignment and quality degradation issues of DiT-based approaches, we design an Instance Matching Mechanism that integrates the instances with the sketch and noise channels, ensuring visual consistency across different sequences while maintaining controllability. Additionally, to mitigate the degradation of fine-grained details, we propose an Adaptive Decoupled Control Module that injects semantic features from characters, backgrounds, and text conditions into the diffusion model, significantly enhancing detail fidelity. 
 

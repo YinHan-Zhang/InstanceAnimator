@@ -9,7 +9,7 @@
 
 ## Overview
 
-Demo Video: 【👇 click it!】
+Demo Video: 👇click it!👇
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/cSNypayMU2w/maxresdefault.jpg)](https://www.youtube.com/watch?v=cSNypayMU2w)
 
@@ -21,24 +21,27 @@ Existing animation colorization methods rely heavily on a single initial referen
 
 ## Environment
 
-    conda create -n InstanceAnimator python=3.12
+```python
+conda create -n InstanceAnimator python=3.12
 
-    pip install -r requirements.txt
+pip install -r requirements.txt
+```
 
 ## Repository
-
-    git clone https://github.com/YinHan-Zhang/InstanceAnimator.git
+```python
+git clone https://github.com/YinHan-Zhang/InstanceAnimator.git
     
-    cd InstanceAnimator
-
+cd InstanceAnimator
+```
 
 ## OpenAnimate Dataset
 
 We fully open-source our training dataset.
 
 ```sh
-    modelscope login
-    modelscope download --dataset NiceYinHan/OpenAnimate --local_dir ./OpenAnimate
+modelscope login
+
+modelscope download --dataset NiceYinHan/OpenAnimate --local_dir ./OpenAnimate
 ```
 
 # Train
@@ -58,17 +61,19 @@ Dataset Format:
     "type": "video"
 }
 ```
-After finish data preparation, you can launch training ...
+
+After finishing data preparation, you can launch training ...
+
 ```bash
-    bash training/train_control_lora.sh
+bash training/train_control_lora.sh
 ```
 
 # inference
 
-modify model path in `predict_video_decouple.py`, 
+Modify model path in `predict_video_decouple.py`, 
 
 ```bash
-    python  inference/predict_video_decouple.py
+python  inference/predict_video_decouple.py
 ```
 
 

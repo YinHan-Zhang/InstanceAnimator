@@ -10,7 +10,15 @@
 ## Overview
 
 <div align="center">
-  <video src="./assets/video.mp4" width="70%" poster=""> </video>
+  <iframe 
+    width="80%"  <!-- 响应式宽度，适配不同屏幕 -->
+    height="450" 
+    src="https://youtu.be/cSNypayMU2w"
+    title="YouTube video player" 
+    frameborder="0" 
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+    allowfullscreen
+  ></iframe>
 </div>
 
 We propose InstanceAnimator, a novel Diffusion Transformer framework for multi-instance sketch video colorization.
@@ -33,7 +41,7 @@ Existing animation colorization methods rely heavily on a single initial referen
 
 ## OpenAnimate Dataset
 
-We fully open source our training dataset.
+We fully open-source our training dataset.
 
 ```sh
     modelscope login

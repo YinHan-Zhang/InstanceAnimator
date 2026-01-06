@@ -1,10 +1,10 @@
 export MODEL_NAME="Wan2.1-Fun-14B-Control"
 export DATASET_NAME="datasets/internal_datasets/"
-export DATASET_META_NAME="datasets/video_data_1129.json"
+export DATASET_META_NAME="datasets/video_data.json"
 
 NCCL_DEBUG=INFO
 
-CUDA_VISIBLE_DEVICES=0,1 accelerate launch --multi_gpu --num_processes 2 --gpu_ids 2,6 --main_process_port 29501 training/train_control_lora.py \
+CUDA_VISIBLE_DEVICES=0,1 accelerate launch --multi_gpu --num_processes 2 --gpu_ids 0,1 --main_process_port 29501 training/train_control_lora.py \
   --config_path="config/wan2.1/wan_civitai.yaml" \
   --pretrained_model_name_or_path=$MODEL_NAME \
   --train_data_meta=$DATASET_META_NAME \

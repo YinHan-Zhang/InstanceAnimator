@@ -27,11 +27,3 @@ diffusers>=0.30.1
 transformers>=4.46.2
 huggingface-hub==0.31.2
 tokenizers==0.20.3
-
-# qwen3-vl
-pip install git+https://github.com/huggingface/transformers
-# qwen-image  
-pip install git+https://github.com/huggingface/diffusers
-
-# 恢复
-pip install  transformers==4.46.2 huggingface-hub==0.31.2 tokenizers==0.20.3

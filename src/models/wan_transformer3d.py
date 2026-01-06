@@ -306,12 +306,8 @@ class WanI2VCrossAttention(WanSelfAttention):
         self.v_img = nn.Linear(dim, dim)
         self.norm_k_img = WanRMSNorm(dim, eps=eps) if qk_norm else nn.Identity()
 
-        self.alpha_img = nn.Parameter(torch.zeros((1, )))
         self.alpha_ins = nn.Parameter(torch.zeros((1, )))
 
-        self.k_ins = nn.Linear(dim, dim)
-        self.v_ins = nn.Linear(dim, dim)
-        self.norm_k_ins = WanRMSNorm(dim, eps=eps) if qk_norm else nn.Identity()
 
     def forward(self, x, context, context_lens, dtype=torch.bfloat16, t=0, ins_num=1, text_control_strength=None, bg_control_strength=None, ins_control_strength=None):
         r"""
@@ -334,8 +330,8 @@ class WanI2VCrossAttention(WanSelfAttention):
         v_img = self.v_img(context_img.to(dtype)).view(b, -1, n, d)
 
         # ins kv
-        k_ins = self.norm_k_ins(self.k_ins(context_ins)).view(b, -1, n, d)
-        v_ins = self.v_ins(context_ins).view(b, -1, n, d)
+        k_ins = self.norm_k_img(self.k_img(context_ins)).view(b, -1, n, d)
+        v_ins = self.v_img(context_ins).view(b, -1, n, d)
 
         # compute attention
         x = attention(
@@ -365,10 +361,10 @@ class WanI2VCrossAttention(WanSelfAttention):
         # output
         x = x.flatten(2)
         img_x = img_x.flatten(2)
-
         ins_x = ins_x.flatten(2)
+        
         if bg_control_strength is None and ins_control_strength is None:
-            x = x + self.alpha_img * img_x + self.alpha_ins * ins_x # [text,bg,ins]
+            x = (1- self.alpha_ins) * x + img_x + self.alpha_ins * ins_x # [text,bg,ins]
         else:
             x = text_control_strength * x + bg_control_strength * img_x + ins_control_strength * ins_x
 

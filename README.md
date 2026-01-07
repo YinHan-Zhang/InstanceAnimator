@@ -1,6 +1,11 @@
 # InstanceAnimator: Multi-Instance Sketch Video Colorization
 
 
+<p align="center">
+    &nbsp&nbsp 🖥️ <a href="https://github.com/YinHan-Zhang/InstanceAnimator">GitHub</a> &nbsp&nbsp | &nbsp&nbsp🤖 <a href="https://modelscope.cn/models/NiceYinHan/InstanceAnimator">ModelScope</a>&nbsp&nbsp | &nbsp&nbsp 📑 <a href="https://arxiv.org"> Paper</a> &nbsp&nbsp | <br> 📑 <a href="https://modelscope.cn/datasets/NiceYinHan/OpenAnimate"> Dataset</a> &nbsp&nbsp | 🫰 <a href="https://yinhan-zhang.github.io/animator"> Website</a> 
+<br>
+
+
 ![](./assets/logo.jpeg)
 
 # News
@@ -9,15 +14,11 @@
 
 ## Overview
 
-Demo Video: 👇click it!👇
-
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/cSNypayMU2w/maxresdefault.jpg)](https://www.youtube.com/watch?v=cSNypayMU2w)
-
+![](./assets/teaser.png)
 
 We propose InstanceAnimator, a novel Diffusion Transformer framework for multi-instance sketch video colorization.
 Existing animation colorization methods rely heavily on a single initial reference frame, resulting in fragmented workflows and limited customizability. To eliminate these constraints, we introduce a Canvas Guidance Condition that allows users to freely place reference elements on a blank canvas, enabling flexible user control. To address the misalignment and quality degradation issues of DiT-based approaches, we design an Instance Matching Mechanism that integrates the instances with the sketch and noise channels, ensuring visual consistency across different sequences while maintaining controllability. Additionally, to mitigate the degradation of fine-grained details, we propose an Adaptive Decoupled Control Module that injects semantic features from characters, backgrounds, and text conditions into the diffusion model, significantly enhancing detail fidelity. 
 
-![](./assets/teaser.png)
 
 ## Framework
 ![framework](./assets/framework.png)
@@ -25,13 +26,11 @@ Existing animation colorization methods rely heavily on a single initial referen
 # Application
 ![](./assets/bg_con.jpg)
 
-**We support a dynamic background rendering generation during colorization by visual background guidance.**
+**We support a dynamic background rendering generation during colorization by visual background guidance. (interal experiment version).**
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/4517d1ee-86d9-44b3-aaeb-4a00d8a9500f" width="70%" poster=""> </video>
 </div>
-
-
 
 
 # Set up
@@ -51,9 +50,15 @@ git clone https://github.com/YinHan-Zhang/InstanceAnimator.git
 cd InstanceAnimator
 ```
 
+## Model Weight
+
+```sh
+modelscope download NiceYinHan/InstanceAnimator --local_dir ./ckpt
+```
+
 ## OpenAnimate Dataset
 
-We fully open-source our training dataset.
+We fully open-source our training dataset. (Due to the legal copyright issues of the animation dataset, the download of the dataset is restricted. We apologize for any inconvenience.)
 
 ```sh
 modelscope login

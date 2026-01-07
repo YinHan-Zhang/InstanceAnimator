@@ -2,7 +2,7 @@
 
 
 <p align="center">
-    &nbsp&nbsp 🖥️ <a href="https://github.com/YinHan-Zhang/InstanceAnimator">GitHub</a> &nbsp&nbsp | &nbsp&nbsp🤖 <a href="https://modelscope.cn/models/NiceYinHan/InstanceAnimator">ModelScope</a>&nbsp&nbsp | &nbsp&nbsp 📑 <a href="https://arxiv.org"> Paper</a> &nbsp&nbsp | <br> 📑 <a href="https://modelscope.cn/datasets/NiceYinHan/OpenAnimate"> Dataset</a> &nbsp&nbsp | 🫰 <a href="https://yinhan-zhang.github.io/animator"> Website</a> 
+    &nbsp&nbsp 🖥️ <a href="https://github.com/YinHan-Zhang/InstanceAnimator">GitHub</a> &nbsp&nbsp | &nbsp&nbsp🤖 <a href="https://modelscope.cn/models/NiceYinHan/InstanceAnimator">ModelScope</a>&nbsp&nbsp | &nbsp&nbsp 📑 <a href="https://arxiv.org"> Paper</a> &nbsp&nbsp <br> 📑 <a href="https://modelscope.cn/datasets/NiceYinHan/OpenAnimate"> Dataset</a> &nbsp&nbsp | 🫰 <a href="https://yinhan-zhang.github.io/animator"> Website</a> 
 <br>
 
 
@@ -53,6 +53,8 @@ cd InstanceAnimator
 ## Model Weight
 
 ```sh
+modelscope download PAI/Wan2.1-Fun-14B-Control --local_dir ./Wan2.1-Fun-14B-Control
+
 modelscope download NiceYinHan/InstanceAnimator --local_dir ./ckpt
 ```
 

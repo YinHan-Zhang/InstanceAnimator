@@ -2,7 +2,7 @@
 
 
 <p align="center">
-    &nbsp&nbsp 🖥️ <a href="https://github.com/YinHan-Zhang/InstanceAnimator">GitHub</a> &nbsp&nbsp | &nbsp&nbsp🤖 <a href="https://modelscope.cn/models/NiceYinHan/InstanceAnimator">ModelScope</a>&nbsp&nbsp | &nbsp&nbsp 📑 <a href="https://arxiv.org"> Paper</a> &nbsp&nbsp <br> 📑 <a href="https://modelscope.cn/datasets/NiceYinHan/OpenAnimate"> Dataset</a> &nbsp&nbsp | 🫰 <a href="https://yinhan-zhang.github.io/animator"> Website</a> 
+    &nbsp&nbsp 🖥️ <a href="https://github.com/YinHan-Zhang/InstanceAnimator">GitHub</a> &nbsp&nbsp | &nbsp&nbsp🤖 <a href="https://modelscope.cn/models/NiceYinHan/InstanceAnimator">Model</a>&nbsp&nbsp | &nbsp&nbsp 📑 <a href="https://arxiv.org"> Paper</a> &nbsp&nbsp <br> 📊 <a href="https://modelscope.cn/datasets/NiceYinHan/OpenAnimate"> Dataset</a> &nbsp&nbsp | 🫰 <a href="https://yinhan-zhang.github.io/animator"> Website</a> 
 <br>
 
 
@@ -10,7 +10,7 @@
 
 # News
 
-- 2025-012-16 : release code ✅
+- 2025-12-16 : release code ✅
 
 ## Overview
 

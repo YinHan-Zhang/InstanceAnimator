@@ -10,7 +10,8 @@
 
 # News
 
-- 2025-12-16 : release code ✅
+- 2026-3: model v2 (coming soon)
+- 2025-12: release code/model (v1)/dataset ✅
 
 ## Overview
 
@@ -26,7 +27,7 @@ Existing animation colorization methods rely heavily on a single initial referen
 # Application
 ![](./assets/bg_con.jpg)
 
-**We support a dynamic background rendering generation during colorization by visual background guidance. (interal experiment version).**
+**We support a dynamic background rendering generation in some cases during colorization by visual background guidance.**
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/4517d1ee-86d9-44b3-aaeb-4a00d8a9500f" width="70%" poster=""> </video>

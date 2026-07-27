@@ -8,11 +8,6 @@
 
 ![](./assets/logo.jpeg)
 
-# News
-
-- 2026-3: model v2 (coming soon)
-- 2025-12: release code/model (v1)/dataset ✅
-
 ## Overview
 
 ![](./assets/teaser.png)
@@ -56,7 +51,8 @@ cd InstanceAnimator
 ```sh
 modelscope download PAI/Wan2.1-Fun-14B-Control --local_dir ./Wan2.1-Fun-14B-Control
 
-modelscope download NiceYinHan/InstanceAnimator --local_dir ./ckpt
+# so sorry that model weight has been loss, you need to retrain model.
+# modelscope download NiceYinHan/InstanceAnimator --local_dir ./ckpt
 ```
 
 ## OpenAnimate Dataset
@@ -93,7 +89,7 @@ After finishing data preparation, you can launch training ...
 bash training/train_control_lora.sh
 ```
 
-# inference
+# Inference
 
 Modify model path in `predict_video_decouple.py`, 
 
@@ -101,6 +97,13 @@ Modify model path in `predict_video_decouple.py`,
 python  inference/predict_video_decouple.py
 ```
 
+# Web UI
+
+```bash
+python interface/web_app.py                # real inference
+python interface/web_app.py --mock         # UI test without model
+python interface/web_app.py --port 7860 --model_name /path/to/Wan2.1-Fun-14B-Control
+```
 
 # Limitation
 

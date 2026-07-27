@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Decolor: Decouple Control for Interactive Animate Line Art Coloring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+
+<div class="bg-glow bg-glow-1"></div>
+<div class="bg-glow bg-glow-2"></div>
+
+<!-- ======================= Top Nav ======================= -->
+<header class="nav">
+  <div class="nav-inner">
+    <div class="brand">
+      <div class="brand-mark">IA</div>
+      <div class="brand-text">
+        <span class="brand-name">Decolor</span>
+        <span class="brand-sub">Decouple Control for Interactive Animate Line Art Coloring</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      {% if mock %}<span class="pill pill-warn">MOCK DEMO MODE</span>{% endif %}
+      <span class="pill" id="modelStatusPill"><span class="dot"></span><span id="modelStatusText">Model not loaded</span></span>
+    </div>
+  </div>
+</header>
+
+<!-- ======================= Hero ======================= -->
+<section class="hero">
+  <img class="hero-img" src="{{ url_for('static', filename='img/hero.png') }}" alt="hero"/>
+  <div class="hero-mask"></div>
+  <div class="hero-content">
+    <h1>Create Every Animation <span class="grad-text">to Life</span></h1>
+    <p>Upload a sketch video, a background and instance reference images. With decoupled control strengths, direct the motion and appearance of every character precisely.</p>
+    <div class="hero-steps">
+      <div class="hs"><i>1</i>Upload sketch video</div><span class="hs-arrow">→</span>
+      <div class="hs"><i>2</i>Set background &amp; instances</div><span class="hs-arrow">→</span>
+      <div class="hs"><i>3</i>Tune params &amp; generate</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= Main ======================= -->
+<main class="layout">
+
+  <!-- ---------- Left: inputs ---------- -->
+  <div class="col-left">
+
+    <!-- ============ 01 · Control Inputs ============ -->
+    <section class="card">
+      <div class="card-head">
+        <h2><span class="idx">01</span>Control Inputs <em>Media</em></h2>
+      </div>
+
+      <!-- ===== Two independent upload areas: Sketch Video + Background ===== -->
+      <div class="input-grid control-grid">
+        <!-- Sketch Control Video -->
+        <div>
+          <label class="field-label">Sketch Control Video <b class="req">required</b></label>
+          <div class="dropzone dz-control" id="dzVideo" data-kind="video">
+            <input type="file" id="fileVideo" accept="video/mp4,video/webm,video/quicktime" hidden/>
+            <div class="dz-empty">
+              <svg viewBox="0 0 24 24"><path d="M17 10.5V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5l5 4v-11l-5 4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              <p>Drag &amp; drop or click to upload<br/><span>.mp4 / .webm / .mov</span></p>
+            </div>
+            <div class="dz-preview hidden"><video muted playsinline></video>
+              <button class="dz-clear" title="Remove">✕</button></div>
+          </div>
+        </div>
+
+        <!-- Background Image (independent) -->
+        <div>
+          <label class="field-label">Background Image <b class="req">required</b></label>
+          <div class="dropzone dz-control" id="dzBg" data-kind="image">
+            <input type="file" id="fileBg" accept="image/*" hidden/>
+            <div class="dz-empty">
+              <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Zm0 11 4.5-4.5 3 3L16 9l4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <p>Background<br/><span>click / drop image</span></p>
+            </div>
+            <div class="dz-preview hidden"><img/><button class="dz-clear" title="Remove">✕</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instance Reference Images (independent, multi) -->
+      <div class="inst-block">
+        <label class="field-label">Instance Reference Images <span class="hint">one per character</span></label>
+        <div class="ref-row" id="instRefRow">
+          <div class="ref-add" id="instRefAdd">
+            <input type="file" id="fileRefs" accept="image/*" multiple hidden/>
+            <span>＋</span><p>Add instance</p>
+          </div>
+        </div>
+        <p class="ref-note">Click ＋ or drop images here. Each becomes a separate reference character.</p>
+      </div>
+    </section>
+
+    <!-- ============ 02 · Scene Composer (parallel, optional) ============ -->
+    <section class="card composer-card">
+      <div class="card-head">
+        <h2><span class="idx">02</span>Scene Composer <em>Optional · extra reference</em></h2>
+      </div>
+      <p class="composer-desc">
+        Arrange instances over a background on the canvas. The composited result is sent as
+        <b>one extra reference image</b> alongside your Instance Reference Images — it complements,
+        but never replaces, the two upload areas above.
+      </p>
+      <div class="composer-toolbar">
+        <button type="button" class="cm-btn" id="btnBg">🖼 Set Background</button>
+        <button type="button" class="cm-btn ghost" id="btnAddInstComposer">＋ Add Instance</button>
+        <button type="button" class="cm-btn ghost" id="btnClearInst">Clear Instances</button>
+        <button type="button" class="cm-btn ghost" id="btnClearAll">Reset Canvas</button>
+        <input type="file" id="fileBgCanvas" accept="image/*" hidden/>
+        <input type="file" id="fileAddInstComposer" accept="image/*" multiple hidden/>
+      </div>
+      <div class="composer-stage">
+        <canvas id="composer" width="512" height="320"></canvas>
+        <div class="composer-hint" id="composerHint">Set a background, then add instances and drag them onto the canvas</div>
+      </div>
+      <p class="composer-help">Drag to move · scroll over a selected instance to resize · click an instance to select</p>
+      <div class="ref-row" id="composerRefRow" style="margin-top:12px"></div>
+    </section>
+
+    <!-- ============ 03 · Text Description ============ -->
+    <section class="card">
+      <div class="card-head">
+        <h2><span class="idx">03</span>Text Description <em>Prompt</em></h2>
+      </div>
+      <textarea id="prompt" rows="4" placeholder="Describe the scene, character actions and camera, e.g.: Two foxes chasing each other in the snow, slow panning shot, cinematic, soft morning light..."></textarea>
+      <details class="neg-details">
+        <summary>Negative prompt (quality-control terms built in by default)</summary>
+        <textarea id="negativePrompt" rows="3">{{ default_negative_prompt }}</textarea>
+      </details>
+    </section>
+
+    <!-- ============ 04 · Result ============ -->
+    <section class="card" id="resultCard">
+      <div class="card-head">
+        <h2><span class="idx">04</span>Generated Result <em>Result</em></h2>
+        <span class="hint" id="resultSeed"></span>
+      </div>
+      <div class="result-body">
+        <div class="result-empty" id="resultEmpty">
+          <svg viewBox="0 0 24 24"><path d="m10 8.5 6 3.5-6 3.5v-7ZM3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          <p>Your generated video will play here</p>
+        </div>
+        <div class="result-video hidden" id="resultVideoWrap">
+          <video id="resultVideo" controls autoplay muted playsinline></video>
+          <div class="result-actions">
+            <a id="downloadBtn" class="btn-ghost" download>⬇ Download Video</a>
+          </div>
+        </div>
+      </div>
+      <div class="history" id="historyRow"></div>
+    </section>
+  </div>
+
+  <!-- ---------- Right: parameters ---------- -->
+  <aside class="col-right">
+    <section class="card sticky">
+      <div class="card-head">
+        <h2><span class="idx">⚙</span>Generation Params <em>Parameters</em></h2>
+      </div>
+
+      <!-- Resolution -->
+      <div class="param-group">
+        <label class="field-label">Resolution</label>
+        <div class="preset-row" id="presetRow">
+          <button class="preset active" data-w="512" data-h="320">512×320</button>
+          <button class="preset" data-w="832" data-h="480">832×480</button>
+          <button class="preset" data-w="1280" data-h="720">1280×720</button>
+          <button class="preset" data-w="320" data-h="512">320×512</button>
+        </div>
+        <div class="wh-row">
+          <div class="num-field"><span>W</span><input type="number" id="width" value="512" step="16" min="128" max="1536"/></div>
+          <span class="wh-x">×</span>
+          <div class="num-field"><span>H</span><input type="number" id="height" value="320" step="16" min="128" max="1536"/></div>
+        </div>
+      </div>
+
+      <!-- Duration -->
+      <div class="param-group">
+        <div class="slider-field">
+          <div class="sf-head"><label>Video Frames</label><output id="videoLengthVal">49</output></div>
+          <input type="range" id="videoLength" min="17" max="129" step="4" value="49"/>
+          <p class="sf-note">Frame count must be 4n+1; <span id="durationNote">49 frames ≈ 3.1s @16fps</span></p>
+        </div>
+        <div class="slider-field">
+          <div class="sf-head"><label>Frame Rate (FPS)</label><output id="fpsVal">16</output></div>
+          <input type="range" id="fps" min="8" max="30" step="1" value="16"/>
+        </div>
+      </div>
+
+      <!-- Sampling -->
+      <div class="param-group">
+        <div class="slider-field">
+          <div class="sf-head"><label>Sampling Steps</label><output id="stepsVal">30</output></div>
+          <input type="range" id="steps" min="10" max="60" step="1" value="30"/>
+        </div>
+        <div class="slider-field">
+          <div class="sf-head"><label>Guidance Scale (CFG)</label><output id="cfgVal">3.0</output></div>
+          <input type="range" id="cfg" min="1" max="10" step="0.5" value="3"/>
+        </div>
+        <div class="row-2">
+          <div>
+            <label class="field-label">Sampler</label>
+            <select id="sampler">
+              <option value="Flow">Flow</option>
+              <option value="Flow_Unipc">Flow UniPC</option>
+              <option value="Flow_DPM++">Flow DPM++</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Shift <span class="hint">480p≈3 / 720p≈5</span></label>
+            <input type="number" id="shift" value="3" step="0.5" min="0.5" max="10"/>
+          </div>
+        </div>
+        <div class="seed-row">
+          <label class="field-label">Random Seed</label>
+          <div class="seed-input">
+            <input type="number" id="seed" value="43" min="-1"/>
+            <button id="diceBtn" title="Randomize seed">🎲</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Decoupled control strengths -->
+      <div class="param-group accent">
+        <label class="field-label group-title">Decoupled Control Strengths <span class="hint">core capability</span></label>
+        <div class="slider-field">
+          <div class="sf-head"><label>✏️ Text Control</label><output id="textStrengthVal">0.50</output></div>
+          <input type="range" id="textStrength" min="0" max="1" step="0.05" value="0.5"/>
+        </div>
+        <div class="slider-field">
+          <div class="sf-head"><label>🏞 Background Control</label><output id="bgStrengthVal">0.50</output></div>
+          <input type="range" id="bgStrength" min="0" max="1" step="0.05" value="0.5"/>
+        </div>
+        <div class="slider-field">
+          <div class="sf-head"><label>🎭 Instance Control</label><output id="insStrengthVal">0.40</output></div>
+          <input type="range" id="insStrength" min="0" max="1" step="0.05" value="0.4"/>
+        </div>
+      </div>
+
+      <!-- Advanced -->
+      <details class="adv-details">
+        <summary>Advanced Settings</summary>
+        <div class="param-group">
+          <div class="slider-field">
+            <div class="sf-head"><label>LoRA Weight</label><output id="loraVal">0.85</output></div>
+            <input type="range" id="lora" min="0" max="1.5" step="0.05" value="0.85"/>
+          </div>
+          <div class="slider-field">
+            <div class="sf-head"><label>CFG Skip Ratio</label><output id="cfgSkipVal">0.00</output></div>
+            <input type="range" id="cfgSkip" min="0" max="0.25" step="0.01" value="0"/>
+            <p class="sf-note">Skip part of the CFG steps for speed-up (0 ~ 0.25)</p>
+          </div>
+          <label class="check-row"><input type="checkbox" id="riflex"/><span>Enable RIFLEx (long-video frequency extrapolation)</span></label>
+        </div>
+      </details>
+
+      <!-- Generate button -->
+      <button class="generate-btn" id="generateBtn">
+        <span class="gb-label">✦ Generate</span>
+      </button>
+
+      <!-- Progress -->
+      <div class="progress-wrap hidden" id="progressWrap">
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-meta">
+          <span id="progressStage">Preparing…</span>
+          <span id="progressPct">0%</span>
+        </div>
+      </div>
+      <p class="error-msg hidden" id="errorMsg"></p>
+    </section>
+  </aside>
+</main>
+
+<footer class="footer">
+  <p>DeColor: Decouple Control for Interactive Animate Line Art Coloring</p>
+</footer>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

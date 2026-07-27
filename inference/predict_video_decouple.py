@@ -59,7 +59,7 @@ riflex_k            = 6
 # Config and model path
 config_path         = "config/wan2.1/wan_civitai.yaml"
 # model path
-model_name          = "Wan2.1-Fun-14B-Control"
+model_name          = "./Wan2.1-Fun-14B-Control"
 
 # Choose the sampler in "Flow", "Flow_Unipc", "Flow_DPM++"
 sampler_name        = "Flow"
@@ -70,9 +70,9 @@ sampler_name        = "Flow"
 shift               = 3
 
 # Load pretrained model if need
-transformer_path    = "transformer.safetensors"
+transformer_path    = None
 vae_path            = None
-lora_path           = "lora.safetensors"
+lora_path           = None # "./ckpt/lora.safetensors"
 
 # Other params
 sample_size         = [320, 512]
@@ -82,15 +82,15 @@ fps                 = 16
 # Use torch.float16 if GPU does not support torch.bfloat16
 # ome graphics cards, such as v100, 2080ti, do not support torch.bfloat16
 weight_dtype            = torch.bfloat16
-control_video           = "sketch.mp4"
-bg_image                = "bg.jpeg"
+control_video           = "./demo/sketch.mp4"
+bg_image                = "./demo/bg.png"
 
 subject_ref_images      = [
-    "instance1.png",
-    "instance2.png",
+    "./demo/instance_1.png",
+    "./demo/instance_2.png",
 ]
 
-prompt                  = "your prompt here."
+prompt                  = "Two character moves with smooth, lively motion across the scene, vibrant coloring, clean line art, high-quality animation"
 
 negative_prompt         = "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
 
@@ -124,7 +124,13 @@ if transformer_path is not None:
         state_dict = torch.load(transformer_path, map_location="cpu")
     state_dict = state_dict["state_dict"] if "state_dict" in state_dict else state_dict
 
-    m, u = transformer.load_state_dict(state_dict, strict=False)
+    # `assign=True` is required when low_cpu_mem_usage=True: the
+    # InstanceAnimator-added modules (e.g. instance_embedding) live on the meta
+    # device, and a plain load_state_dict silently drops them ("no-op").
+    try:
+        m, u = transformer.load_state_dict(state_dict, strict=False, assign=True)
+    except TypeError:
+        m, u = transformer.load_state_dict(state_dict, strict=False)
     print(f"missing keys: {len(m)}, unexpected keys: {len(u)}")
 
 # Get Vae

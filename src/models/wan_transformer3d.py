@@ -25,7 +25,6 @@ from ..dist import (get_sequence_parallel_rank,
 from ..utils import cfg_skip
 from .attention_utils import attention
 from .cache_utils import TeaCache
-from .wan_camera_adapter import SimpleAdapter
 
 
 def sinusoidal_embedding_1d(dim, position):
@@ -339,7 +338,7 @@ class WanI2VCrossAttention(WanSelfAttention):
         self.v_img = nn.Linear(dim, dim)
         self.norm_k_img = WanRMSNorm(dim, eps=eps) if qk_norm else nn.Identity()
 
-        self.alpha_ins = nn.Parameter(torch.zeros((1, )))
+        # self.alpha_ins = nn.Parameter(torch.zeros((1, )))
 
 
     def forward(self, x, context, context_lens, dtype=torch.bfloat16, t=0, ins_num=1, text_control_strength=None, bg_control_strength=None, ins_control_strength=None):
@@ -396,10 +395,11 @@ class WanI2VCrossAttention(WanSelfAttention):
         x = x.flatten(2)
         img_x = img_x.flatten(2)
         ins_x = ins_x.flatten(2)
-        if bg_control_strength is None and ins_control_strength is None:
-            x = (1 - self.alpha_ins) * x + img_x + self.alpha_ins * ins_x # [text,bg,ins]
-        else:
-            x = text_control_strength * x + bg_control_strength * img_x + ins_control_strength * ins_x
+
+        # if bg_control_strength is None and ins_control_strength is None:
+        #     x = (1 - self.alpha_ins) * x + img_x + self.alpha_ins * ins_x # [text,bg,ins]
+        # else:
+        #     x = text_control_strength * x + bg_control_strength * img_x + ins_control_strength * ins_x
 
         x = self.o(x)
         return x
@@ -581,213 +581,6 @@ class MLPProj(torch.nn.Module):
         clip_extra_context_tokens = self.proj(image_embeds)
         return clip_extra_context_tokens
 
-import torch
-import numpy as np
-import cv2
-from torch import Tensor
-from torchvision.models.optical_flow import Raft_Small_Weights, raft_small
-from torchvision.utils import flow_to_image
-
-def extract_rgb_flow(of_model, video_frames, flow2img=True):
-    
-    # # 确保输入是浮点类型并归一化到 [0,1]
-    # if video_frames.dtype == torch.uint8:
-    #     video_frames = video_frames.float() / 255.0
-    video_frames = video_frames.float()
-
-    if video_frames.shape[-1] == 1:  # [T, 1, H, W]
-        video_frames = video_frames.repeat(1, 1, 1, 3)  # [T, 3, H, W]
-    # 使用 RAFT 的预处理转换 (官方推荐)
-    transform = Raft_Small_Weights.DEFAULT.transforms()
-
-    flow_feats = []
-    for i in range(len(video_frames) - 1):
-        frame1, frame2 = transform(video_frames[i].permute(2,0,1), video_frames[i + 1].permute(2,0,1))
-        frame1 = frame1.unsqueeze(0)  # [1, C, H, W]
-        frame2 = frame2.unsqueeze(0)  # [1, C, H, W]
-        flow = of_model(frame1, frame2)[-1]
-        flow = flow.permute(0,2,3,1)[0]
-        flow_feats.append(flow)
-    # flow_feats = torch.cat(flow_feats, dim=0)
-    if flow2img:
-        flow_feats = flow_to_image(flow_feats).to(video_frames.dtype) / 127.5 - 1  # [-1,1]
-    return flow_feats
-
-def normalize_motion(motion: Tensor, eps: float = 1e-6) -> Tensor:
-    """归一化运动强度到[0, 1]范围，避免极端值干扰"""
-    motion_min = motion.min()
-    motion_max = motion.max()
-    return (motion - motion_min) / (motion_max - motion_min + eps)
-
-@torch.no_grad()
-def dynamic_rope_params(
-    line_sketch_video: Tensor,  # 输入线稿视频，形状：[B, T, H, W, C]（B=批量，T=帧数，H=高，W=宽，C=通道）
-    max_seq_len: int, 
-    dim: int, 
-    theta: float = 10000.0
-) -> Tensor:
-    """
-    结合光流的动态RoPE编码函数，输出适应运动的频率张量
-    
-    输出形状：[max_seq_len, dim]，其中dim拆分为时间/高度/宽度三个维度的动态频率
-    """
-    # 1. 维度拆分（与原始逻辑一致）
-    d_t = dim - 4 * (dim // 6)  # 时间维度RoPE特征数
-    d_h = 2 * (dim // 6)        # 高度维度RoPE特征数
-    d_w = 2 * (dim // 6)        # 宽度维度RoPE特征数
-    assert d_t + d_h + d_w == dim, "维度拆分不匹配总维度"
-
-    # 2. 从线稿视频提取光流（运动信息）
-    B, T, H, W, C = line_sketch_video.shape
-    device = line_sketch_video.device
-    
-    ## 使用Raft提取光流 
-    weights = Raft_Small_Weights.DEFAULT
-    of_model = raft_small(weights=weights).to(device)
-    of_model.eval()
-
-    flow_list = extract_rgb_flow(of_model, line_sketch_video[0], flow2img=False)
-    
-    # 聚合光流：[B*(T-1), H, W, 2] → 取平均光流作为运动特征（简化处理，也可逐帧对应）
-    flow_stack = torch.stack(flow_list)  # [B*(T-1), H, W, 2]
-    avg_flow = flow_stack.mean(dim=0)    # [H, W, 2]（平均水平u、垂直v运动）
-    u_motion = avg_flow[..., 0]  # 水平运动分量（宽度方向）：[H, W]
-    v_motion = avg_flow[..., 1]  # 垂直运动分量（高度方向）：[H, W]
-    motion_magnitude = torch.norm(avg_flow, dim=-1)  # 运动强度（整体）：[H, W]
-
-
-    # 3. 生成动态频率（时间/高度/宽度维度分别适配运动）
-    # 3.1 时间维度：运动越强，时间频率越高（增强时间连续性感知）
-    # 运动强度归一化后扩展到序列长度维度
-    time_motion = normalize_motion(motion_magnitude.mean())  # 全局运动强度：标量
-    time_pos = torch.arange(max_seq_len, device=device)  # [max_seq_len]
-    time_base_freqs = 1.0 / torch.pow(theta, torch.arange(0, d_t, 2, device=device).to(torch.float64).div(d_t))  # [d_t//2]
-    # 动态调整：运动越强，频率缩放越大（1.0 + 0.5*time_motion控制强度）
-    time_scale_factor = 0.5
-    time_freqs = torch.outer(time_pos, time_base_freqs * (1.0 + time_scale_factor * time_motion))  # [max_seq_len, d_t//2]
-    time_rope = torch.polar(torch.ones_like(time_freqs), time_freqs)  # 复数形式：[max_seq_len, d_t//2]
-
-    # 3.2 高度维度：垂直运动v越大，高度频率越敏感（增强垂直边缘运动）
-    # 取高度方向的平均垂直运动作为位置依赖的调整因子
-    h_pos = torch.arange(max_seq_len, device=device)  # [max_seq_len]
-    h_base_freqs = 1.0 / torch.pow(theta, torch.arange(0, d_h, 2, device=device).to(torch.float64).div(d_h))  # [d_h//2]
-    # 垂直运动沿高度方向平均，映射到序列位置
-    v_motion_avg = normalize_motion(v_motion.mean(dim=1))  # [H] → 沿宽度平均，得到高度方向的运动强度
-    h_motion_factor = torch.nn.functional.interpolate(
-        v_motion_avg.unsqueeze(0).unsqueeze(0), 
-        size=max_seq_len, 
-        mode="linear"
-    ).squeeze()  # [max_seq_len]（插值到序列长度）
-
-    # 动态频率 = 基础频率 * (1 + 运动因子 * 2.0)（系数从0.3→2.0，放大影响）
-    motion_scale_factor = 0.3
-    h_freqs = h_pos.unsqueeze(1) * (h_base_freqs * (1.0 + motion_scale_factor * h_motion_factor.unsqueeze(1)))  # [max_seq_len, d_h//2]
-    h_rope = torch.polar(torch.ones_like(h_freqs), h_freqs)  # [max_seq_len, d_h//2]
-
-    # 3.3 宽度维度：水平运动u越大，宽度频率越敏感（增强水平边缘运动）
-    w_pos = torch.arange(max_seq_len, device=device)  # [max_seq_len]
-    w_base_freqs = 1.0 / torch.pow(theta, torch.arange(0, d_w, 2, device=device).to(torch.float64).div(d_w))  # [d_w//2]
-    # 水平运动沿宽度方向平均，映射到序列位置
-    u_motion_avg = normalize_motion(u_motion.mean(dim=0))  # [W] → 沿高度平均，得到宽度方向的运动强度
-    w_motion_factor = torch.nn.functional.interpolate(
-        u_motion_avg.unsqueeze(0).unsqueeze(0), 
-        size=max_seq_len, 
-        mode="linear"
-    ).squeeze()  # [max_seq_len]（插值到序列长度）
-
-    w_freqs = w_pos.unsqueeze(1) * (w_base_freqs * (1.0 + motion_scale_factor * w_motion_factor.unsqueeze(1)))  # [max_seq_len, d_w//2]
-    w_rope = torch.polar(torch.ones_like(w_freqs), w_freqs)  # [max_seq_len, d_w//2]
-
-    # 4. 拼接三个维度的动态RoPE频率
-    # 注意：复数张量拼接需保持维度一致（第二维拼接）
-    freqs = torch.cat([time_rope, h_rope, w_rope], dim=1)  # [max_seq_len, dim//2] → 复数维度对应原dim的一半
-    return freqs
-
-
-def read_line_sketch_video(
-    video_path,
-    target_size = None,  # (H, W)，可选，指定输出尺寸
-    max_frames = None  # 可选，限制最大读取帧数
-) -> torch.Tensor:
-    """
-    从视频路径读取线稿视频，转换为张量格式
-    
-    参数:
-        video_path: 线稿视频的路径（支持mp4、avi等格式）
-        target_size: 可选，指定输出帧的尺寸 (H, W)，如(32, 32)；不指定则保持原尺寸
-        max_frames: 可选，限制最大读取帧数（避免超长视频耗时）
-    
-    返回:
-        线稿视频张量，形状为 [1, T, H, W, 1]，其中：
-            - 1: 批量大小（单视频）
-            - T: 实际读取的帧数（≤ max_frames，无限制则为视频总帧数）
-            - H, W: 帧的高度和宽度（由target_size或原视频决定）
-            - 1: 单通道（线稿为灰度图）
-    """
-    # 打开视频文件
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        raise ValueError(f"无法打开视频文件: {video_path}")
-    
-    frames = []
-    frame_count = 0
-    
-    while cap.isOpened():
-
-        # 逐帧读取
-        ret, frame = cap.read()
-        if not ret:  # 读取完毕
-            break
-        
-        # 1. 线稿视频转为单通道灰度图（线稿通常为黑白，去除彩色干扰）
-        if frame.ndim == 3:  # 若为彩色图（BGR格式）
-            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        else:  # 已为灰度图
-            gray_frame = frame
-
-        gray_frame = cv2.equalizeHist(gray_frame) # 关键：增强线稿对比度，帮助光流捕捉运动
-
-        # 2. 调整尺寸（若指定target_size）
-        if target_size is not None:
-            h, w = target_size
-            gray_frame = cv2.resize(gray_frame, (w, h), interpolation=cv2.INTER_AREA)
-        
-        
-        # 3. 收集帧（转为uint8格式，符合线稿像素范围0-255）
-        if frame_count % 2 == 0:
-            frames.append(gray_frame.astype(np.uint8))
-        frame_count += 1
-        
-        # 4. 若达到最大帧数限制，停止读取
-        if max_frames is not None and len(frames) >= max_frames:
-            break
-    
-    # 释放资源
-    cap.release()
-    
-    if not frames:
-        raise ValueError(f"视频文件{video_path}中未读取到有效帧")
-    
-    # 转换为张量：[T, H, W] → [1, T, H, W, 1]（添加批量维度和通道维度）
-    video_tensor = torch.from_numpy(np.stack(frames)).unsqueeze(0).unsqueeze(-1)
-    return video_tensor
-
-
-# 对比可视化：静止 vs 运动
-def get_dynamic_rope(
-    video_path: str,
-    max_seq_len: int = 1024,  # 增大序列长度，让周期性差异更明显
-    dim: int = 128,  # 维度数，确保拆分后各维度有足够长度（如d_t=8, d_h=8, d_w=8）
-    device = "cuda",
-):
-    # 1. 读取线稿视频
-    video_tensor = read_line_sketch_video(video_path, target_size=(512,512), max_frames=40).to(device)
-
-    # 2. 生成动态RoPE（获取维度边界）
-    dynamic_freqs = dynamic_rope_params(video_tensor, max_seq_len, dim)
-
-    return dynamic_freqs
-
 class WanTransformer3DModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
     r"""
     Wan diffusion backbone supporting both text-to-video and image-to-video.
@@ -907,15 +700,11 @@ class WanTransformer3DModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
                               window_size, qk_norm, cross_attn_norm, eps)
             for _ in range(num_layers)
         ])
-        # self.adapters = nn.ModuleList()
+        
         for layer_idx, block in enumerate(self.blocks):
             block.self_attn.layer_idx = layer_idx
             block.self_attn.num_layers = self.num_layers
 
-            # if layer_idx % 5 == 0:
-            #     self.adapters.append(
-            #         FusionBlock("cross_attn", dim, ffn_dim, num_heads,window_size, qk_norm, cross_attn_norm, eps)
-            #     )
 
         # head
         self.head = Head(dim, out_dim, patch_size, eps)
@@ -937,12 +726,7 @@ class WanTransformer3DModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         if model_type == 'i2v':
             self.img_emb = MLPProj(1280, dim)
         
-        # self.dino_adapter = MLPProj(1024, dim)
-
-        if add_control_adapter:
-            self.control_adapter = SimpleAdapter(in_dim_control_adapter, dim, kernel_size=patch_size[1:], stride=patch_size[1:], downscale_factor=downscale_factor_control_adapter)
-        else:
-            self.control_adapter = None
+        self.control_adapter = None
 
         if add_ref_conv:
             self.ref_conv = nn.Conv2d(in_dim_ref_conv, dim, kernel_size=patch_size[1:], stride=patch_size[1:])
@@ -1104,15 +888,6 @@ class WanTransformer3DModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         if self.freqs.device != device and torch.device(type="meta") != device:
             self.freqs = self.freqs.to(device)
         
-        if control_video_path is not None and isinstance(control_video_path, str):
-            self.freqs = get_dynamic_rope(control_video_path, device=device).to(device)
-        elif control_video_path is not None:
-            freqs = []
-            for path in control_video_path:
-                freq = get_dynamic_rope(path, device=device).to(device)
-                freqs.append(freq)
-            self.freqs = torch.cat(freqs, dim=0)
-
         if y is not None:
             x = [torch.cat([u, v], dim=0) for u, v in zip(x, y)]
 
@@ -1144,16 +919,6 @@ class WanTransformer3DModel(ModelMixin, ConfigMixin, FromOriginalModelMixin):
             grid_sizes = torch.stack([torch.tensor([u[0] + subject_ref_frames, u[1], u[2]]) for u in grid_sizes]).to(grid_sizes.device)
             seq_len += subject_ref.size(1)
             x = [torch.concat([u, _subject_ref.unsqueeze(0)], dim=1) for _subject_ref, u in zip(subject_ref, x)] # 拼到x的后面
-            if t.dim() != 1 and t.size(1) < seq_len:
-                pad_size = seq_len - t.size(1)
-                last_elements = t[:, -1].unsqueeze(1)
-                padding = last_elements.repeat(1, pad_size)
-                t = torch.cat([t, padding], dim=1)
-        
-        if dino_img is not None:
-            dino_img = self.dino_adapter(dino_img)
-            seq_len += dino_img.size(1)
-            x = [torch.concat([u, _dino_img.unsqueeze(0)], dim=1) for _dino_img, u in zip(dino_img, x)] # for是因为batch
             if t.dim() != 1 and t.size(1) < seq_len:
                 pad_size = seq_len - t.size(1)
                 last_elements = t[:, -1].unsqueeze(1)
